@@ -9,9 +9,10 @@
 - [x] bot/CLAUDE.md (для колеги)
 
 ## Крок 2 — FastAPI skeleton + OData клієнт
-- [ ] api/main.py — FastAPI app, CORS, startup event
-- [ ] api/odata_client.py — httpx клієнт з Basic Auth, GET/POST методи
-- [ ] api/routers/metadata.py — GET /metadata (запит $metadata до 1С, кеш)
+- [x] api/main.py — FastAPI app, lifespan, structlog
+- [x] api/odata_client.py — httpx клієнт з Basic Auth, GET/POST, fetch_metadata
+- [x] api/routers/metadata.py — GET /metadata (кеш) + POST /metadata/refresh
+- [x] log_config/config.py — structlog setup (console / JSON для Loki)
 - [ ] api/routers/invoices.py — GET /invoices/outgoing, GET /invoices/incoming
 
 ## Крок 3 — Тест FastAPI
@@ -43,8 +44,8 @@
 - [ ] logging/config.py — structlog налаштування (JSON, Grafana Loki)
 - [ ] Підключити логування в api/, bot/, llm/
 - [ ] Зареєструватись на Grafana Cloud, отримати Loki URL + credentials
-- [ ] logging/grafana/loki.yml — конфіг
-- [ ] logging/grafana/dashboard.json — базовий dashboard
+- [ ] log_config/grafana/loki.yml — конфіг
+- [ ] log_config/grafana/dashboard.json — базовий dashboard
 
 ## Крок 9 — Docker
 - [ ] Dockerfile для api/

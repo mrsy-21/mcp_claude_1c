@@ -17,6 +17,16 @@ Telegram бот який дозволяє бухгалтерам запитув�
 
 ---
 
+## 1С / BAS система
+
+**BAS Accounting CORP, edition 2.1 (2.1.33.4)**
+- Розробник: NetHelp JAROCKI PIOTR
+- Сайт: https://www.bas-soft.eu/soft/bas-mass/bas-accounting-korp/
+- OData інтерфейс стандартний (як у 1С), але назви entity можуть відрізнятись від типової 1С:Бухгалтерії
+- При дебазі назв entity і структури запитів — документація на bas-soft.eu
+
+---
+
 ## Стек
 
 - **Python 3.11+** з **uv** (не pip)
@@ -88,7 +98,7 @@ project/
 │       ├── acts.py           ← GET + POST /acts
 │       └── hr.py             ← POST /employees
 │
-└── logging/
+└── log_config/               ← НЕ logging/ — конфлікт зі stdlib Python
     ├── config.py             ← structlog налаштування
     └── grafana/
         ├── loki.yml          ← Loki конфіг
