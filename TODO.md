@@ -19,11 +19,8 @@
 - [x] api/routers/entity.py — GET /entity/{entity_name} + POST /entity/{entity_name}
 - [ ] Тест через Swagger з реальними entity з тестової бази
 
-## Крок 4 — MCP сервер
-- [ ] mcp_server/server.py — два tools:
-  - `query_entity` — GET /entity/{name} з фільтрами
-  - `create_entity` — POST /entity/{name} з body
-  - `get_metadata` — GET /metadata
+## Крок 4 — MCP сервер ✅
+- [x] mcp_server/server.py — tools: get_metadata, query_entity, create_entity
 
 ## Крок 5 — LLM абстракція ✅
 - [x] llm/base.py — LLMClient (ABC), Message, ToolDefinition, LLMResponse

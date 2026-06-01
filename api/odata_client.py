@@ -37,6 +37,11 @@ class ODataClient:
         timeout: Request timeout in seconds (default 30).
     """
 
+    _EMPTY_DATE = "0001-01-01T00:00:00"
+    _SKIP_BOOL_KEYS = frozenset({
+        "DeletionMark", "IsFolder", "НеАрхивный", "НедействителенПоНДС",
+    })
+
     def __init__(
         self,
         base_url: str,
@@ -157,6 +162,48 @@ class ODataClient:
             message = response.text or response.reason_phrase
 
         raise ODataError(status_code=response.status_code, message=str(message))
+
+    @staticmethod
+    def clean_record(record: dict[str, Any]) -> dict[str, Any]:
+        """Remove technical OData fields that have no value for LLM.
+
+        Strips:
+        - ``DataVersion`` — internal version hash
+        - ``*@navigationLinkUrl`` — OData navigation link annotations
+        - ``Predefined``, ``PredefinedDataName`` — service flags
+        - ``*_Key`` fields except ``Ref_Key`` — GUID foreign keys without
+          human-readable value (LLM cannot use them directly)
+        - Empty strings, empty lists, and ``null`` values
+        - Date fields equal to the OData epoch default (0001-01-01T00:00:00)
+        - Structural boolean fields (DeletionMark, IsFolder, etc.)
+
+        Keeps all meaningful text, numeric, boolean, and date fields.
+
+        Args:
+            record: Raw OData entity dict.
+
+        Returns:
+            Cleaned dict suitable for LLM consumption.
+        """
+        result = {}
+        for key, value in record.items():
+            if key == "DataVersion":
+                continue
+            if key.endswith("@navigationLinkUrl"):
+                continue
+            if key in ("Predefined", "PredefinedDataName"):
+                continue
+            if key.endswith("_Key") and key != "Ref_Key":
+                continue
+            # Drop empty values — they add noise without information
+            if value is None or value == "" or value == []:
+                continue
+            if value == ODataClient._EMPTY_DATE:
+                continue
+            if key in ODataClient._SKIP_BOOL_KEYS:
+                continue
+            result[key] = value
+        return result
 
     @staticmethod
     def _parse_metadata_xml(xml_text: str) -> list[dict[str, str]]:

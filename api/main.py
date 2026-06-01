@@ -11,7 +11,10 @@ from fastapi import FastAPI
 from log_config.config import setup_logging
 from api.odata_client import ODataClient, ODataError
 from api.routers import metadata as metadata_router
-from api.routers import entity as entity_router
+from api.routers import counterparties as counterparties_router
+from api.routers import invoices as invoices_router
+from api.routers import acts as acts_router
+from api.routers import hr as hr_router
 
 load_dotenv()
 setup_logging(os.getenv("LOG_LEVEL", "INFO"))
@@ -69,7 +72,10 @@ app = FastAPI(
 )
 
 app.include_router(metadata_router.router)
-app.include_router(entity_router.router)
+app.include_router(counterparties_router.router)
+app.include_router(invoices_router.router)
+app.include_router(acts_router.router)
+app.include_router(hr_router.router)
 
 
 @app.get("/health", tags=["system"])
