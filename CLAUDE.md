@@ -139,10 +139,24 @@ LOKI_API_KEY=
 
 ---
 
-## LLM абстракція
+## LLM абстракція (Strategy + Factory)
 
-`llm/base.py` визначає інтерфейс. `groq_client.py` і `claude_client.py` його реалізують.
-При міграції з Groq на Claude — міняємо одну змінну в .env, клас у DI, більше нічого.
+```
+llm/
+├── base.py          ← LLMClient (ABC), Message, ToolDefinition, LLMResponse
+├── groq_client.py   ← Groq / Kimi K2 (OpenAI-сумісний формат)
+├── claude_client.py ← Anthropic Claude (інший формат tool_use)
+└── factory.py       ← читає LLM_PROVIDER з .env → повертає потрібний клієнт
+```
+
+**Щоб змінити провайдера:** тільки `LLM_PROVIDER=claude` в `.env` — більше нічого.
+
+**Щоб додати нового провайдера:**
+1. Створити `llm/<provider>_client.py` — наслідувати `LLMClient`
+2. Додати запис в `_PROVIDERS` у `factory.py`
+3. Змінити `LLM_PROVIDER` в `.env`
+
+Бот і MCP сервер імпортують тільки `factory.create_llm_client()` — не знають про конкретний провайдер.
 
 ---
 
