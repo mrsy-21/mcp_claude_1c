@@ -11,6 +11,7 @@ from fastapi import FastAPI
 from log_config.config import setup_logging
 from api.odata_client import ODataClient, ODataError
 from api.routers import metadata as metadata_router
+from api.routers import entity as entity_router
 
 load_dotenv()
 setup_logging(os.getenv("LOG_LEVEL", "INFO"))
@@ -68,6 +69,7 @@ app = FastAPI(
 )
 
 app.include_router(metadata_router.router)
+app.include_router(entity_router.router)
 
 
 @app.get("/health", tags=["system"])
