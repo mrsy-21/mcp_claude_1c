@@ -42,6 +42,8 @@ class LLMResponse:
         raw: The original provider response object, for debugging.
         stop_reason: Why the model stopped — ``"end_turn"``, ``"tool_use"``,
             ``"max_tokens"``, etc. (normalised across providers).
+        input_tokens: Tokens consumed by the prompt (0 if provider doesn't report).
+        output_tokens: Tokens generated in the response (0 if provider doesn't report).
     """
 
     def __init__(
@@ -50,11 +52,15 @@ class LLMResponse:
         tool_calls: list[dict[str, Any]],
         raw: Any,
         stop_reason: str,
+        input_tokens: int = 0,
+        output_tokens: int = 0,
     ) -> None:
         self.content = content
         self.tool_calls = tool_calls
         self.raw = raw
         self.stop_reason = stop_reason
+        self.input_tokens = input_tokens
+        self.output_tokens = output_tokens
 
     @property
     def has_tool_calls(self) -> bool:

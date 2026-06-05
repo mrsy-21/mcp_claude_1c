@@ -38,3 +38,4 @@ logs/
 
 # Docker
 *.override.yml
+odata.xml

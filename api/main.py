@@ -11,10 +11,7 @@ from fastapi import FastAPI
 from log_config.config import setup_logging
 from api.odata_client import ODataClient, ODataError
 from api.routers import metadata as metadata_router
-from api.routers import counterparties as counterparties_router
-from api.routers import invoices as invoices_router
-from api.routers import acts as acts_router
-from api.routers import hr as hr_router
+from api.routers import bas as bas_router
 
 load_dotenv()
 setup_logging(os.getenv("LOG_LEVEL", "INFO"))
@@ -24,17 +21,7 @@ log = structlog.get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(fastapi_app: FastAPI):
-    """Manage application startup and shutdown.
-
-    On startup:
-    - Creates a shared ODataClient and stores it in ``app.state``.
-    - Fetches OData ``$metadata`` and caches entity list.
-      If 1C is unreachable the app still starts; metadata will be ``None``
-      and the /metadata endpoint will return 503 until a manual refresh.
-
-    On shutdown:
-    - Closes the httpx client cleanly.
-    """
+    """Manage application startup and shutdown."""
     base_url = os.environ["ODATA_BASE_URL"]
     user = os.environ["ODATA_USER"]
     password = os.environ["ODATA_PASSWORD"]
@@ -65,25 +52,16 @@ app = FastAPI(
     title="1C OData Bridge",
     description=(
         "FastAPI middleware between the MCP server and 1C/BAS OData. "
-        "Exposes semantic endpoints that map to OData entity queries."
+        "Exposes a generic /bas/{entity_name} endpoint for all entities."
     ),
-    version="0.1.0",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
 app.include_router(metadata_router.router)
-app.include_router(counterparties_router.router)
-app.include_router(invoices_router.router)
-app.include_router(acts_router.router)
-app.include_router(hr_router.router)
+app.include_router(bas_router.router)
 
 
 @app.get("/health", tags=["system"])
 async def health() -> dict:
-    """Health check endpoint.
-
-    Returns:
-        ``{"status": "ok"}`` — always 200 as long as the process is alive.
-        The caller should use ``GET /metadata`` to verify 1C connectivity.
-    """
     return {"status": "ok"}

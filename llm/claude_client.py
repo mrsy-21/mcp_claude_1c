@@ -134,12 +134,22 @@ class ClaudeClient(LLMClient):
                     }
                 )
 
-        if tool_calls:
-            log.info("claude_tool_calls", tools=[t["name"] for t in tool_calls])
+        input_tokens = getattr(response.usage, "input_tokens", 0)
+        output_tokens = getattr(response.usage, "output_tokens", 0)
+
+        log.info(
+            "claude_response",
+            stop_reason=stop_reason,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            tools=[t["name"] for t in tool_calls] if tool_calls else [],
+        )
 
         return LLMResponse(
             content=content_text,
             tool_calls=tool_calls,
             raw=response,
             stop_reason=stop_reason,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
         )

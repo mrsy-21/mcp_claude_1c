@@ -7,15 +7,15 @@
 Ти реалізуєш Telegram бот (`bot/`) який:
 1. Отримує повідомлення від користувача через aiogram
 2. Передає їх в agentic loop разом з history розмови
-3. LLM (через `llm/`) вирішує які tools викликати
-4. Результати tools повертаються назад LLM до фінальної відповіді
+3. Claude (через `llm/`) вирішує які tools викликати
+4. Результати tools повертаються назад Claude до фінальної відповіді
 5. Відповідь відправляється користувачу в Telegram
 
 ## Що вже зроблено іншими
 
 - `api/` — FastAPI сервер який спілкується з 1С OData. Запущений окремо.
-- `mcp_server/` — MCP сервер з tools. Запущений окремо.
-- `llm/` — абстракція над LLM (Groq зараз, Claude потім). Вже реалізована.
+- `mcp_server/` — MCP сервер з 2 universal tools. Запущений окремо.
+- `llm/` — абстракція над LLM (Claude зараз). Вже реалізована.
 
 **Тобі не потрібно чіпати ці модулі.**
 
@@ -47,13 +47,56 @@ bot/
 ### claude_client.py (agentic loop)
 ```
 1. Додати повідомлення користувача в history
-2. Відправити history + system prompt в LLM
+2. Відправити history + system prompt в Claude
 3. Якщо відповідь містить tool_use:
-   a. Викликати MCP tool
+   a. Викликати MCP tool через _dispatch()
    b. Додати результат в history як tool_result
+      format: role=user, content=[{type: tool_result, tool_use_id: ..., content: ...}]
    c. Повернутись до кроку 2
 4. Якщо відповідь text (end_turn) — повернути текст
 ```
+
+**Важливо для Claude message format:**
+- Tool calls у відповіді assistant: `content=[{type: tool_use, id: ..., name: ..., input: {...}}]`
+- Tool results у відповіді user: `content=[{type: tool_result, tool_use_id: ..., content: "..."}]`
+
+## MCP Tools (2 universal tools)
+
+```python
+TOOLS = [
+    ToolDefinition(
+        name="query_bas",
+        description="Читає дані з 1С/BAS. entity_name обов'язковий...",
+        parameters={
+            "type": "object",
+            "properties": {
+                "entity_name": {"type": "string"},   # обов'язково
+                "date_from": {"type": "string"},      # РРРР-ММ-ДД
+                "date_to": {"type": "string"},        # РРРР-ММ-ДД
+                "search": {"type": "string"},
+                "top": {"type": "integer", "default": 20},
+                "skip": {"type": "integer", "default": 0},
+            },
+            "required": ["entity_name"],
+        },
+    ),
+    ToolDefinition(
+        name="create_bas",
+        description="Створює запис в 1С/BAS.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "entity_name": {"type": "string"},
+                "data": {"type": "object"},
+            },
+            "required": ["entity_name", "data"],
+        },
+    ),
+]
+```
+
+Повний список entity і їх описи — в `mcp_server/server.py` (константа `_ENTITY_LIST`).
+Скопіюй той же список в system prompt бота.
 
 ## System prompt (використовувати цей)
 
@@ -61,18 +104,39 @@ bot/
 Ти — бухгалтерський асистент з доступом до 1С/BAS.
 Відповідай завжди українською мовою.
 Поточний рік — 2026. Якщо користувач каже "травень" — маєш на увазі 2026-05-01 по 2026-05-31.
-Результати форматуй як читабельний текст — не JSON.
 Числа форматуй з роздільниками тисяч (наприклад: 1 234 567.00 грн).
 Якщо записів більше 10 — показуй перші 10 і пиши "та ще N записів".
-Якщо не знаєш точну назву entity 1С — спочатку виклич get_metadata.
+
+Система: BAS Accounting CORP 2.1 (bas-soft.eu) — українська бухгалтерська система.
+
+Доступні інструменти:
+- query_bas — єдиний інструмент для читання даних з BAS.
+  Параметри: entity_name (обов'язково), date_from, date_to (РРРР-ММ-ДД), search, top, skip.
+- create_bas — створити запис в BAS.
+
+Список доступних entity вбудований в опис інструменту query_bas.
+Не вигадуй назв entity — використовуй тільки зі списку.
+
+Правила:
+1. Для будь-якого читання даних — одразу виклич query_bas з правильним entity_name
+2. Якщо отримав результат з items — одразу форматуй відповідь, НЕ повторюй запит
+3. Якщо items порожній — повідом що нічого не знайдено
+4. Для пошуку по назві — передай параметр search
+
+Форматування відповіді:
+- Нумерований список або таблиця
+- Для документів: номер, дату (ДД.ММ.РРРР), суму (грн з роздільниками), статус
+- Для контрагентів: код, назву, тип, ЄДРПОУ якщо є, ІПН якщо є
+- Порожні поля не показуй
 ```
 
 ## Змінні середовища (з .env)
 
 ```
 TELEGRAM_BOT_TOKEN=        ← токен бота від @BotFather
-GROQ_API_KEY=              ← для LLM
-GROQ_MODEL=                ← moonshotai/kimi-k2-instruct
+LLM_PROVIDER=claude
+ANTHROPIC_API_KEY=
+ANTHROPIC_MODEL=claude-sonnet-4-6
 FASTAPI_URL=               ← де запущений FastAPI (http://localhost:8000)
 ```
 
@@ -85,14 +149,12 @@ FASTAPI_URL=               ← де запущений FastAPI (http://localhost
 
 ## Логування
 
-Використовуй `structlog` для всіх логів. Кожна подія — окремий лог з контекстом:
-
 ```python
 import structlog
 log = structlog.get_logger()
 
 log.info("message_received", user_id=user_id, text_length=len(text))
-log.info("tool_called", tool_name="get_invoices", user_id=user_id)
+log.info("tool_called", tool_name="query_bas", entity="Document_СчетНаОплату", user_id=user_id)
 log.info("response_sent", user_id=user_id, response_length=len(response))
 log.error("llm_error", user_id=user_id, error=str(e))
 ```
