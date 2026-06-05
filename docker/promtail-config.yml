@@ -1,0 +1,28 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /var/log/promtail-positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: bas-mcp
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          service: bas-mcp
+          __path__: /logs/*.log
+
+    pipeline_stages:
+      # Спробувати парсити як JSON — якщо не JSON (httpx логи) просто пропускаємо
+      - json:
+          expressions:
+            level: level
+            event: event
+      - labels:
+          level:
+          event:
