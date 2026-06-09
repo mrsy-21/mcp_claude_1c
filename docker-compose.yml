@@ -57,6 +57,21 @@ services:
       - loki
     restart: unless-stopped
 
+  bot:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.bot
+    env_file: .env
+    environment:
+      - LOG_FORMAT=json
+      - LOG_LEVEL=INFO
+      - FASTAPI_URL=http://fastapi:8000
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      - fastapi
+    restart: unless-stopped
+
 volumes:
   loki-data:
   grafana-data:
